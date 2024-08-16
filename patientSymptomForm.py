@@ -18,7 +18,6 @@ def submit_symptoms():
     if other_symptom.value:
         symptoms.append(other_symptom.value)
     ui.notify(f"Symptoms submitted: {', '.join(symptoms)}")
-    # Here you would typically save the data or perform further actions
 
 with ui.card().classes('w-full max-w-3xl mx-auto'):
     ui.label('Symptom Input Form').classes('text-2xl font-bold mb-4')

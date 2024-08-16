@@ -2,7 +2,6 @@ from nicegui import ui
 
 def submit_form():
     ui.notify(f"Form submitted for {name.value}")
-    # Here you would typically save the data or perform further actions
 
 with ui.card().classes('w-full max-w-5xl mx-auto'):
     ui.label('Patient Information Form').classes('text-2xl font-bold mb-4')
