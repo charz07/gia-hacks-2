@@ -1,6 +1,7 @@
 from nicegui import ui
 from datetime import date
 
+from doctorPatientView import viewPatient
 
 
 ehr = {
@@ -42,14 +43,18 @@ result = ui.label()
 result.style('font-size: 40px; color: #333; font-weight: bold; white-space: pre-wrap')
 result.set_text(f"All of your patients and their appointments: \n")
 
+@ui.page('/patientView')
+    def patientView():
+        with ui.page():  
+            viewPatient(i)
+
 for i in patients:
+    
+
     result = ui.label()
     result.style('font-size: 20px; color: #333; font-weight: bold; white-space: pre-wrap')
     result.set_text(f"\n{toString(i[0])}\n\n{toString(i[1])}\n\n{toString(i[2])}")
+    ui.link('See Patient Profile', patientView)
     ui.separator().style('color: #333; height: 3px; margin: 15px 0;')
 
-
-
-# Start the NiceGUI app
-print("\n\n\n\n\n\n\nThe file itself is being updated\n\n\n\n")
 ui.run()
