@@ -5,6 +5,8 @@ import secrets
 from typing import Dict, Optional, List
 import boto3
 from botocore.exceptions import ClientError
+from doctor import DoctorAccount
+
 
 class PatientAccount:
     _instance = None
@@ -27,11 +29,16 @@ class PatientAccount:
             cls.bucket_name = "gia-hacks-2"
 
     @classmethod
-    def register_user(cls, identifier: str, password: str, name: str, date_of_birth: str, address: str) -> bool:
+    def register_user(cls, identifier: str, password: str, name: str, date_of_birth: str, address: str, doctor_email = "doctor@example.com") -> bool:
         cls._ensure_initialized()
         try:
             if cls._load_user_data(identifier):
                 print(f"User with identifier {identifier} already exists.")
+                return False
+
+            doctor_data = cls._load_doctor_data(doctor_email)
+            if not doctor_data:
+                print(f"Doctor with email {doctor_email} does not exist.")
                 return False
 
             salt = secrets.token_hex(16)
@@ -43,6 +50,7 @@ class PatientAccount:
                 "name": name,
                 "date_of_birth": date_of_birth,
                 "address": address,
+                "doctor_email": doctor_email,
                 "ehr": {},
                 "consultation_history": [],
                 "scheduled_appointments": []
@@ -51,12 +59,37 @@ class PatientAccount:
             json_data = json.dumps(new_user, indent=2)
             cls.s3.put_object(Bucket=cls.bucket_name, Key=f"{identifier}.json", Body=json_data)
 
-            print(f"User {identifier} registered successfully.")
+            # Add patient to doctor's patient list
+            doctor_data['patients'].append(identifier)
+            cls.s3.put_object(Bucket=cls.bucket_name, Key=f"doctor_{doctor_email}.json", Body=json.dumps(doctor_data))
+
+            print(f"User {identifier} registered successfully and added to Dr. {doctor_data['name']}'s patient list.")
             return True
 
         except Exception as e:
             print(f"Registration failed: {str(e)}")
             return False
+
+    @classmethod
+    def schedule_appointment(cls, appointment: Dict) -> None:
+        cls._ensure_initialized()
+        cls._check_login()
+        required_fields = ['date', 'time']
+        if not all(field in appointment for field in required_fields):
+            raise ValueError("Appointment must include date and time.")
+        
+        appointment['doctor_email'] = cls._current_user['doctor_email']
+        cls._current_user['scheduled_appointments'].append(appointment)
+        print(f"Appointment scheduled with Dr. {appointment['doctor_email']} on {appointment['date']} at {appointment['time']}.")
+        
+        # Update the patient data in S3
+        cls._save_user_data()
+
+    @classmethod
+    def _save_user_data(cls) -> None:
+        json_data = json.dumps(cls._current_user, indent=2)
+        cls.s3.put_object(Bucket=cls.bucket_name, Key=f"{cls._current_user['identifier']}.json", Body=json_data)
+
 
     @classmethod
     def login(cls, identifier: str, password: str) -> bool:
@@ -89,13 +122,10 @@ class PatientAccount:
     def add_consultation(cls, consultation: Dict) -> None:
         cls._ensure_initialized()
         cls._check_login()
+        required_fields = ['date', 'doctor', 'notes']
+        if not all(field in consultation for field in required_fields):
+            raise ValueError("Consultation must include date, doctor, and notes.")
         cls._current_user['consultation_history'].append(consultation)
-
-    @classmethod
-    def schedule_appointment(cls, appointment: Dict) -> None:
-        cls._ensure_initialized()
-        cls._check_login()
-        cls._current_user['scheduled_appointments'].append(appointment)
 
     @classmethod
     def save(cls) -> None:
@@ -159,35 +189,68 @@ class PatientAccount:
         cls._ensure_initialized()
         cls._check_login()
         return cls._current_user['scheduled_appointments']
+    @classmethod
+    def _load_doctor_data(cls, email: str) -> Optional[Dict]:
+        cls._ensure_initialized()
+        try:
+            response = cls.s3.get_object(Bucket=cls.bucket_name, Key=f"doctor_{email}.json")
+            return json.loads(response['Body'].read().decode('utf-8'))
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchKey':
+                return None
+            else:
+                raise
 
 # Example usage
 if __name__ == "__main__":
-    # Register a new user
-    PatientAccount.register_user(
-        "newemail@example.com",
+    # Register a new doctor
+    DoctorAccount.register_doctor(
+        "doctor@example.com",
         "password",
-        "Jane Doe",
-        "1985-05-15",
-        "456 Elm St, Othertown, USA"
+        "Dr. Jane Smith",
+        "General Practitioner"
     )
 
-    # Login
-    PatientAccount.login("newemail@example.com", "password")
+    # Register a new patient
+    PatientAccount.register_user(
+        "patient@example.com",
+        "password",
+        "John Doe",
+        "1990-01-01",
+        "123 Main St, Anytown, USA",
+        "doctor@example.com"
+    )
 
-    # Update EHR
-    PatientAccount.update_ehr({"allergies": "None"})
+    # Doctor login
+    DoctorAccount.login("doctor@example.com", "password")
+
+    # List patients
+    print("Doctor's patients:", DoctorAccount.list_patients())
+
+    # Edit patient data
+    DoctorAccount.edit_patient_data("patient@example.com", {"blood_type": "A+"})
 
     # Add consultation
-    PatientAccount.add_consultation({"date": "2023-02-15", "doctor": "Dr. Smith"})
+    DoctorAccount.add_consultation("patient@example.com", {
+        "date": "2023-03-15",
+        "notes": "Patient reported mild fever. Prescribed acetaminophen."
+    })
+
+    # Get patient data
+    patient_data = DoctorAccount.get_patient_data("patient@example.com")
+    if patient_data:
+        print("Patient Data:", patient_data)
+
+    DoctorAccount.logout()
+
+    # Patient login
+    PatientAccount.login("patient@example.com", "password")
 
     # Schedule appointment
-    PatientAccount.schedule_appointment({"date": "2023-03-01", "time": "10:00 AM"})
+    PatientAccount.schedule_appointment({
+        "date": "2023-03-20",
+        "time": "14:00"
+    })
 
-    # Save changes
     PatientAccount.save()
-
-    # Access data
-    print(PatientAccount.ehr())
-
-    # Logout
     PatientAccount.logout()
