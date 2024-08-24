@@ -7,7 +7,7 @@ from groq import Groq
 
 tokenizer = AutoTokenizer.from_pretrained("bvanaken/CORe-clinical-diagnosis-prediction")
 model = AutoModelForSequenceClassification.from_pretrained("bvanaken/CORe-clinical-diagnosis-prediction")
-groq_client = Groq(api_key="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")
+groq_client = Groq(api_key="")
 
 # inputs a list of symptoms and medical history, output text in patient note form 
 def symptom_to_patient_note(symptoms):
@@ -58,7 +58,8 @@ def icd9_to_english(code):
         {"role": "system", "content": """
         Your role is to convert the given ICD9 code to its English description only.
         Under the standard ICD9 code english description, write a short paragraph describing the   
-        ailment and recommended treatment methods.
+        ailment and recommended treatment methods. Do not restate the prompt in any way, only provide
+        the ICD9 code, description, and recommendations
         """},
         {"role": "user", "content": str(code)}
   ]
