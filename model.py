@@ -7,7 +7,7 @@ from groq import Groq
 
 tokenizer = AutoTokenizer.from_pretrained("bvanaken/CORe-clinical-diagnosis-prediction")
 model = AutoModelForSequenceClassification.from_pretrained("bvanaken/CORe-clinical-diagnosis-prediction")
-groq_client = Groq(api_key="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")
+groq_client = Groq(api_key="")
 
 # inputs a list of symptoms and medical history, output text in patient note form 
 def symptom_to_patient_note(symptoms):
