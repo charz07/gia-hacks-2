@@ -48,15 +48,18 @@ def toString(profile):
     print(output)
     return output
 
-def save_text():
-    text = text_area.value
-    print("Text saved:", text)
-    patient.diagnoses.append(text)
-    ui.notify("Changes Saved")
-    #SAVE TEXT TO DATABASE
+
 
 
 def viewPatient(patient):
+
+    def save_text():
+        text = text_area.value
+        print("Text saved:", text)
+        patient.diagnoses.append(text)
+        ui.notify("Changes Saved")
+        #SAVE TEXT TO DATABASE
+
     patient = samplePatient()
     ehr = patient.ehr
     consultationHistory = patient.consultationHistory

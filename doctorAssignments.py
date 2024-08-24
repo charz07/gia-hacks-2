@@ -41,20 +41,15 @@ patients = [(ehr, consultationHistory, currentAppointments), (ehr, consultationH
 # Create a styled label
 result = ui.label()
 result.style('font-size: 40px; color: #333; font-weight: bold; white-space: pre-wrap')
-result.set_text(f"All of your patients and their appointments: \n")
-
-@ui.page('/patientView')
-    def patientView():
-        with ui.page():  
-            viewPatient(i)
+result.set_text(f"All of your patients: \n")
 
 for i in patients:
-    
-
     result = ui.label()
     result.style('font-size: 20px; color: #333; font-weight: bold; white-space: pre-wrap')
-    result.set_text(f"\n{toString(i[0])}\n\n{toString(i[1])}\n\n{toString(i[2])}")
-    ui.link('See Patient Profile', patientView)
+    result.set_text(f"\n{i[0]['name']}:")
+    with ui.expansion('Profile', caption='See Charts and Enter Diagnoses').classes('w-full'):
+        viewPatient(i)
     ui.separator().style('color: #333; height: 3px; margin: 15px 0;')
 
+first = True
 ui.run()
